@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SPA · Prueba de voz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@700&display=swap">
+<style>
+  :root{
+    --bg:#0E1217; --panel:#161C23; --line:#2A333D; --txt:#E6EBF0; --muted:#9AA6B2;
+    --cyan:#4FD1E8; --cyanbg:#0F2A30; --green:#22C55E; --amber:#FCD34D; --orange:#FDBA74; --red:#F87171;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);font-family:'Barlow',system-ui,sans-serif}
+  body{padding:16px;padding-bottom:40px;max-width:560px;margin:0 auto}
+  h1{font-family:'Barlow Condensed',sans-serif;font-size:28px;margin:0 0 4px;letter-spacing:.04em}
+  .sub{color:var(--muted);font-size:18px;margin:0 0 16px}
+  button{font-family:inherit;cursor:pointer}
+  .big{width:100%;min-height:72px;border-radius:16px;border:none;font-size:26px;font-weight:700}
+  .start{background:var(--green);color:#052E14}
+  .stop{background:#3B1D0C;color:var(--orange);border:1px solid #C2410C;font-size:20px;min-height:56px}
+  .estado{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:var(--cyanbg);border:1px solid #1E5560;margin:16px 0;font-size:20px}
+  .dot{width:16px;height:16px;border-radius:50%;background:#556;flex-shrink:0}
+  .dot.on{background:var(--cyan);box-shadow:0 0 0 6px rgba(79,209,232,.2)}
+  .dot.talk{background:var(--amber);box-shadow:0 0 0 6px rgba(252,211,77,.2)}
+  .card{padding:16px;border-radius:16px;background:var(--panel);border:1px solid var(--line);margin-bottom:14px}
+  .lbl{font-size:16px;color:var(--muted);letter-spacing:.08em}
+  .item{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:64px;line-height:1.05;text-align:center;margin:8px 0;overflow-wrap:normal;word-break:keep-all}
+  .prog{display:flex;justify-content:space-between;font-size:18px;color:var(--muted)}
+  .resp{background:var(--green);color:#052E14;min-height:100px;font-family:'Barlow Condensed',sans-serif;font-size:56px}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+  .sm{min-height:56px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--txt);font-size:20px;font-weight:600}
+  .sm.amber{border-color:#6B5A1E;background:#2A2410;color:#FDE68A}
+  .heard{font-size:24px;font-weight:600;min-height:32px}
+  .interp{font-size:18px;color:var(--muted);margin-top:4px}
+  .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px}
+  .seg button{min-height:52px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-size:20px;font-weight:700}
+  .seg button.sel{background:#13343B;color:var(--txt);border-color:var(--cyan)}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+  .row button{width:56px;height:56px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--txt);font-size:28px}
+  .val{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:700}
+  #log{list-style:none;padding:0;margin:8px 0 0;font-size:17px;max-height:340px;overflow-y:auto}
+  #log li{padding:8px 0;border-top:1px solid var(--line)}
+  #log .t{color:var(--muted)}
+  .ok{color:#6EE7A0}.warn{color:var(--amber)}.err{color:var(--red)}
+  .hint{font-size:17px;color:var(--muted);line-height:1.4}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+  <h1>SINGLE PILOT ASSISTANT</h1>
+  <p class="sub">Prueba de voz · prototipo</p>
+
+  <div id="noSoporte" class="card hidden">
+    <p class="err" style="font-size:20px;margin:0">Este navegador no tiene reconocimiento de voz. Probá con Chrome (Android) o Safari (iPhone).</p>
+  </div>
+
+  <button id="btnStart" class="big start">Iniciar prueba</button>
+  <button id="btnStop" class="big stop hidden">Detener prueba</button>
+
+  <div class="estado"><span id="dot" class="dot"></span><span id="estadoTxt">Apagado</span></div>
+
+  <div class="card">
+    <div class="prog"><span id="lista">Decí "Lista, antes del despegue"</span><span id="pos"></span></div>
+    <div id="item" class="item">—</div>
+    <button id="btnResp" class="big resp" disabled>—</button>
+    <div class="grid">
+      <button id="bAnt" class="sm">Anterior</button>
+      <button id="bRep" class="sm">Repetir</button>
+      <button id="bDif" class="sm amber">Diferir</button>
+      <button id="bSb" class="sm">Stand by</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="lbl">ÚLTIMO QUE ESCUCHÓ</div>
+    <div id="heard" class="heard">—</div>
+    <div id="interp" class="interp"></div>
+  </div>
+
+  <div class="card">
+    <div class="lbl">RESPUESTA ACEPTADA</div>
+    <div class="seg" id="segModo">
+      <button data-v="justa">Justa</button><button data-v="check">Check</button><button data-v="ambas" class="sel">Ambas</button>
+    </div>
+    <div class="lbl" style="margin-top:16px">TIEMPO DE ESPERA</div>
+    <div class="row"><button id="espMenos" aria-label="Restar 1 segundo">−</button><span class="val" id="espVal">8 s</span><button id="espMas" aria-label="Sumar 1 segundo">+</button></div>
+    <div class="lbl" style="margin-top:16px">VELOCIDAD DE LECTURA</div>
+    <div class="row"><button id="velMenos" aria-label="Más lento">−</button><span class="val" id="velVal">1.0×</span><button id="velMas" aria-label="Más rápido">+</button></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="margin-top:0"><span class="lbl">REGISTRO</span><button id="btnCopy" class="sm" style="width:auto;padding:0 16px;font-size:18px">Copiar</button></div>
+    <ul id="log"></ul>
+  </div>
+
+  <div class="card hint">
+    <b>Comandos:</b> "Lista, antes del despegue" · respuesta o "Check" · "Repetir" · "Stand by" / "Continuar" · "Diferir" · "Anterior" · "Cancelar lista".<br><br>
+    <b>Lista de prueba:</b> Frenos → Aplicados · Mezcla → Rica · Flaps → Arriba · Magnetos → Ambos · Luces → Encendidas.<br><br>
+    El reconocimiento de este prototipo usa internet. La app final lo hará sin conexión.
+  </div>
+
+<script>
+(function(){
+  const LISTA = {
+    nombre: 'Antes del despegue',
+    alias: ['antes del despegue','antes de despegar','before takeoff','before take off'],
+    items: [
+      {item:'Frenos',    resp:'Aplicados',  alias:['aplicado','puestos','puesto']},
+      {item:'Mezcla',    resp:'Rica',       alias:['rico','full rich']},
+      {item:'Flaps',     resp:'Arriba',     alias:['cero','up']},
+      {item:'Magnetos',  resp:'Ambos',      alias:['both','ambas']},
+      {item:'Luces',     resp:'Encendidas', alias:['encendida','prendidas','prendida','on']}
+    ]
+  };
+  const CHECK = ['check','chek','chec','checked','chequeado','chequeada','chequeo','cheque'];
+  const CMD = {
+    cancelar:  ['cancelar lista','cancelar la lista','cancelar'],
+    standby:   ['stand by','standby','stambay','estambai','espera'],
+    continuar: ['continuar','continua','continue','seguir','sigue'],
+    repetir:   ['repetir','repeti','repita','repite'],
+    anterior:  ['anterior','atras'],
+    diferir:   ['diferir','diferido','diferi','despues']
+  };
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const $ = id => document.getElementById(id);
+
+  let cfg = {modo:'ambas', espera:8, vel:1.0};
+  let estado = 'apagado';           // apagado | reposo | leyendo | esperando | standby
+  let orden = [], pos = 0, diferidos = [], enPendientes = false;
+  let rec = null, quiereEscuchar = false, hablando = false, timer = null, repetido = false;
+  let vozES = null;
+
+  if (!SR) { $('noSoporte').classList.remove('hidden'); $('btnStart').disabled = true; }
+
+  // ---------- utilidades ----------
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+                    .replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+  const tiene = (t, frase) => (' '+t+' ').includes(' '+norm(frase)+' ');
+  const algun = (t, lista) => lista.some(f => tiene(t, f));
+  const hora = () => new Date().toLocaleTimeString('es-AR',{hour12:false});
+
+  function log(txt, cls){
+    const li = document.createElement('li');
+    const t = document.createElement('span'); t.className='t'; t.textContent = hora()+' ';
+    const m = document.createElement('span'); if (cls) m.className = cls; m.textContent = txt;
+    li.append(t, m); $('log').prepend(li);
+    while ($('log').children.length > 60) $('log').lastChild.remove();
+  }
+  function setEstado(e){
+    estado = e;
+    const txt = {apagado:'Apagado', reposo:'Escuchando · decí "Lista, …"', leyendo:'Leyendo…',
+                 esperando:'Esperando respuesta', standby:'STAND BY · decí "Continuar"'}[e];
+    $('estadoTxt').textContent = txt;
+    $('dot').className = 'dot ' + (e==='leyendo' ? 'talk' : (e==='apagado' ? '' : 'on'));
+  }
+  function pintar(){
+    const enLista = estado==='leyendo' || estado==='esperando' || estado==='standby';
+    if (!enLista){
+      $('lista').textContent = 'Decí "Lista, antes del despegue"';
+      $('pos').textContent = ''; $('item').textContent = '—';
+      $('btnResp').textContent = '—'; $('btnResp').disabled = true; return;
+    }
+    const it = LISTA.items[orden[pos]];
+    $('lista').textContent = LISTA.nombre + (enPendientes ? ' · pendientes' : '');
+    $('pos').textContent = (pos+1) + ' de ' + orden.length + (diferidos.length ? ' · ' + diferidos.length + ' dif.' : '');
+    $('item').textContent = it.item.toUpperCase();
+    $('btnResp').textContent = it.resp.toUpperCase();
+    $('btnResp').disabled = false;
+  }
+
+  // ---------- voz (TTS) ----------
+  function elegirVoz(){
+    const vs = speechSynthesis.getVoices();
+    vozES = vs.find(v=>/^es-AR/i.test(v.lang)) || vs.find(v=>/^es-US/i.test(v.lang))
+         || vs.find(v=>/^es-419/i.test(v.lang)) || vs.find(v=>/^es-ES/i.test(v.lang)) || vs.find(v=>/^es/i.test(v.lang)) || null;
+  }
+  if ('speechSynthesis' in window){ elegirVoz(); speechSynthesis.onvoiceschanged = elegirVoz; }
+
+  function decir(texto, luego){
+    pararEscucha();
+    hablando = true;
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = vozES ? vozES.lang : 'es-AR'; if (vozES) u.voice = vozES; u.rate = cfg.vel;
+    const fin = () => { if (!hablando) return; hablando = false; if (luego) luego(); if (estado!=='apagado') escuchar(); };
+    u.onend = fin; u.onerror = fin;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }
+
+  // ---------- reconocimiento ----------
+  function crearRec(){
+    rec = new SR();
+    rec.lang = 'es-AR'; rec.continuous = false; rec.interimResults = false; rec.maxAlternatives = 3;
+    rec.onresult = ev => {
+      const r = ev.results[ev.results.length-1];
+      const alts = []; for (let i=0;i<r.length;i++) alts.push({t:r[i].transcript, c:r[i].confidence});
+      $('heard').textContent = '"' + alts[0].t + '"';
+      procesar(alts);
+    };
+    rec.onerror = ev => {
+      if (ev.error === 'no-speech' || ev.error === 'aborted') return;
+      if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed'){
+        log('Micrófono bloqueado: habilitalo en el navegador', 'err'); detener(); return;
+      }
+      log('Error de reconocimiento: ' + ev.error, 'err');
+    };
+    rec.onend = () => { if (quiereEscuchar && !hablando) setTimeout(arrancarRec, 120); };
+  }
+  function arrancarRec(){ if (!quiereEscuchar || hablando) return; try { rec.start(); } catch(e){} }
+  function escuchar(){ quiereEscuchar = true; arrancarRec(); if (estado==='esperando') armarTimer(); }
+  function pararEscucha(){ quiereEscuchar = false; clearTimeout(timer); try { rec && rec.abort(); } catch(e){} }
+
+  function armarTimer(){
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (estado !== 'esperando') return;
+      if (!repetido){ repetido = true; log('Sin respuesta en ' + cfg.espera + ' s → repite', 'warn'); leer(true); }
+      else log('Sin respuesta → espera en silencio', 'warn');
+    }, cfg.espera * 1000);
+  }
+
+  // ---------- lógica de la lista ----------
+  function iniciarLista(){
+    orden = LISTA.items.map((_,i)=>i); pos = 0; diferidos = []; enPendientes = false;
+    log('Lista iniciada: ' + LISTA.nombre, 'ok');
+    decir(LISTA.nombre + ', Cessna 150', () => leer(false));
+  }
+  function leer(esRepeticion){
+    if (!esRepeticion) repetido = false;
+    setEstado('leyendo'); pintar();
+    const it = LISTA.items[orden[pos]];
+    decir(it.item, () => { setEstado('esperando'); pintar(); });
+  }
+  function avanzar(){
+    pos++;
+    if (pos < orden.length) return leer(false);
+    if (diferidos.length){
+      orden = diferidos.slice(); diferidos = []; pos = 0; enPendientes = true;
+      const n = orden.length;
+      log(n + ' pendiente(s)', 'warn');
+      setEstado('leyendo');
+      return decir(n === 1 ? 'Un pendiente' : n + ' pendientes', () => leer(false));
+    }
+    terminar(LISTA.nombre + ', completa', 'Lista completa');
+  }
+  function terminar(frase, txtLog){
+    log(txtLog, 'ok');
+    setEstado('leyendo');
+    decir(frase, () => { setEstado('reposo'); pintar(); });
+  }
+  function respuestaOk(t){
+    const it = LISTA.items[orden[pos]];
+    const justa = tiene(t, it.resp) || algun(t, it.alias);
+    const chk = algun(t, CHECK);
+    if (cfg.modo === 'justa') return justa;
+    if (cfg.modo === 'check') return chk;
+    return justa || chk;
+  }
+  function otraRespuesta(t){
+    return LISTA.items.some((it,i) => i !== orden[pos] && (tiene(t, it.resp) || algun(t, it.alias)));
+  }
+
+  function procesar(alts){
+    const ts = alts.map(a => norm(a.t));
+    const conf = alts[0].c ? ' (' + Math.round(alts[0].c*100) + '%)' : '';
+    const hay = f => ts.some(f);
+
+    if (estado === 'reposo'){
+      if (hay(t => tiene(t,'lista') && algun(t, LISTA.alias))) { $('interp').textContent = '→ Inicia lista'; log('"'+alts[0].t+'"'+conf+' → inicia lista','ok'); return iniciarLista(); }
+      $('interp').textContent = '→ Ignorado (no es un pedido de lista)'; log('"'+alts[0].t+'"'+conf+' → ignorado'); return;
+    }
+    if (estado === 'standby'){
+      if (hay(t => algun(t, CMD.continuar))) { $('interp').textContent = '→ Continuar'; log('Continuar','ok'); return leer(false); }
+      if (hay(t => algun(t, CMD.cancelar)))  { $('interp').textContent = '→ Cancelar'; return terminar(LISTA.nombre + ', cancelada', 'Lista cancelada'); }
+      $('interp').textContent = '→ Ignorado (en stand by)'; log('"'+alts[0].t+'"'+conf+' → ignorado (stand by)'); return;
+    }
+    if (estado !== 'esperando') return;
+
+    const marcar = (txt, cls) => { clearTimeout(timer); $('interp').textContent = '→ ' + txt; log('"'+alts[0].t+'"'+conf+' → '+txt, cls); };
+    if (hay(t => algun(t, CMD.cancelar)))  { marcar('Cancelar lista','warn'); return terminar(LISTA.nombre + ', cancelada', 'Lista cancelada'); }
+    if (hay(t => algun(t, CMD.standby)))   { marcar('Stand by','warn'); pararEscucha(); setEstado('standby'); return decir('Stand by'); }
+    if (hay(t => algun(t, CMD.repetir)))   { marcar('Repetir'); return leer(true); }
+    if (hay(t => algun(t, CMD.anterior)))  { marcar('Anterior'); pos = Math.max(0, pos-1); return leer(false); }
+    if (hay(t => algun(t, CMD.diferir)))   { marcar('Diferido','warn'); diferidos.push(orden[pos]); return avanzar(); }
+    if (hay(respuestaOk))                  { marcar('Respuesta OK','ok'); return avanzar(); }
+    if (hay(otraRespuesta))                { const it = LISTA.items[orden[pos]]; marcar('Respuesta incorrecta → recuerda','err'); return decir(it.item + ': ' + it.resp, () => { setEstado('esperando'); }); }
+    $('interp').textContent = '→ Ignorado'; log('"'+alts[0].t+'"'+conf+' → ignorado');
+  }
+
+  // ---------- botones ----------
+  function iniciar(){
+    if (!rec) crearRec();
+    $('btnStart').classList.add('hidden'); $('btnStop').classList.remove('hidden');
+    setEstado('reposo'); pintar(); log('Prueba iniciada','ok');
+    decir('Asistente listo');
+  }
+  function detener(){
+    pararEscucha(); hablando = false; speechSynthesis.cancel();
+    setEstado('apagado'); pintar();
+    $('btnStop').classList.add('hidden'); $('btnStart').classList.remove('hidden');
+    log('Prueba detenida');
+  }
+  $('btnStart').onclick = iniciar;
+  $('btnStop').onclick = detener;
+  $('btnResp').onclick = () => { if (estado==='esperando'){ clearTimeout(timer); log('Toque → Respuesta OK','ok'); avanzar(); } };
+  $('bRep').onclick = () => { if (estado==='esperando') leer(true); };
+  $('bAnt').onclick = () => { if (estado==='esperando'){ pos = Math.max(0,pos-1); leer(false); } };
+  $('bDif').onclick = () => { if (estado==='esperando'){ clearTimeout(timer); log('Toque → Diferido','warn'); diferidos.push(orden[pos]); avanzar(); } };
+  $('bSb').onclick = () => {
+    if (estado==='esperando'){ pararEscucha(); setEstado('standby'); $('bSb').textContent='Continuar'; decir('Stand by'); }
+    else if (estado==='standby'){ $('bSb').textContent='Stand by'; leer(false); }
+  };
+
+  document.querySelectorAll('#segModo button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('#segModo button').forEach(x => x.classList.remove('sel'));
+    b.classList.add('sel'); cfg.modo = b.dataset.v; log('Respuesta aceptada: ' + b.textContent);
+  });
+  const pintarCfg = () => { $('espVal').textContent = cfg.espera + ' s'; $('velVal').textContent = cfg.vel.toFixed(1) + '×'; };
+  $('espMenos').onclick = () => { cfg.espera = Math.max(3, cfg.espera-1); pintarCfg(); };
+  $('espMas').onclick   = () => { cfg.espera = Math.min(30, cfg.espera+1); pintarCfg(); };
+  $('velMenos').onclick = () => { cfg.vel = Math.max(0.5, Math.round((cfg.vel-0.1)*10)/10); pintarCfg(); };
+  $('velMas').onclick   = () => { cfg.vel = Math.min(2.0, Math.round((cfg.vel+0.1)*10)/10); pintarCfg(); };
+
+  $('btnCopy').onclick = async () => {
+    const txt = [...$('log').children].map(li => li.textContent).reverse().join('\n');
+    try { await navigator.clipboard.writeText(txt); log('Registro copiado','ok'); }
+    catch(e){ log('No se pudo copiar: seleccioná el texto a mano','err'); }
+  };
+})();
+</script>
+</body>
+</html>
